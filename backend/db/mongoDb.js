@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-exports.connectDb = async (req, res) => {
+const connectDb = async (req, res) => {
     try {
         if (!process.env.MONGO_URI) {
             throw new Error("MONGO_URI is not defined in .env file");
@@ -12,3 +12,4 @@ exports.connectDb = async (req, res) => {
         process.exit(1);
     }
 }
+module.exports = connectDb;
