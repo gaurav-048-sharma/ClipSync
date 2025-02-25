@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const passport = require('passport');
 const authController = require("../controllers/authController.js");
+const authMiddleware = require("../middleware/authMiddleware.js");
 const checkBlacklist = require("../middleware/checkBlacklist.js");
 
 // Initialize Passport
@@ -19,6 +20,10 @@ router.get('/google/callback',
 
 // Standard Auth Routes
 router.post("/signup", authController.signup);
+router.get("/user/:username", authController.getUser);
+router.get("/profile", authMiddleware, authController.getOwnProfile);
+router.put("/profile", authMiddleware, authController.updateProfile);
+router.delete("/profile", authMiddleware, authController.deleteAccount);
 router.post("/login", authController.login);
 router.post("/google-login", authController.googleLogin); // New API endpoint
 router.post("/logout", checkBlacklist, authController.logout);

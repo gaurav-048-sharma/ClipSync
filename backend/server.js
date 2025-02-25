@@ -2,7 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const PORT = process.env.PORT;
-const authRoute = require("./routes/authRoutes.js")
+const authRoute = require("./routes/authRoutes.js");
+const userRoutes = require("./routes/userRoutes.js")
 const passport = require('passport');
 const session = require('express-session');
 const connectDb = require("./db/mongoDb.js")
@@ -24,6 +25,7 @@ app.use(session({
 
 //routes
 app.use("/api/auth",authRoute );
+app.use("/api/users", userRoutes);
 
 app.listen(PORT, (req, res) => {
     connectDb();

@@ -6,12 +6,23 @@ const bcrypt = require("bcryptjs");
 const userSchema = new Schema({
     username: {
         type: String,
-        required: true
+        required: true,
+        unique: true,
+        trim: true,
+        minlength: 3,
+        maxlength: 30
+    },
+    name: {
+        type: String,
+        default: "",
+        trim: true,
+        maxlength: 50
     },
     email: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        trim: true
     },
     password: {
         type: String,
@@ -22,9 +33,8 @@ const userSchema = new Schema({
     },
     googleId: {
         type: String,
-        unique: true,
-        sparse: true, // Allows null values while maintaining uniqueness
-        default: null
+        sparse: true, // Still allows nulls to be excluded from index
+        default: undefined // Avoid indexing null values entirely
     },
     created_at: {
         type: Date,
