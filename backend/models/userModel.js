@@ -17,6 +17,22 @@ const userSchema = new Schema({
         type: String,
         default: "default-profile-pic.jpg" // Path or URL
     },
+    followers: [{
+        type: Schema.Types.ObjectId,
+        ref: "User" // References other User documents
+    }],
+    following: [{
+        type: Schema.Types.ObjectId,
+        ref: "User" // References other User documents
+    }],
+    likedReels: [{
+        type: Schema.Types.ObjectId,
+        ref: "Reel" // References Reel documents
+    }],
+    commentedReels: [{
+        type: Schema.Types.ObjectId,
+        ref: "Reel" // References Reel documents where user commented
+    }],
     created_at: {
         type: Date,
         default: Date.now

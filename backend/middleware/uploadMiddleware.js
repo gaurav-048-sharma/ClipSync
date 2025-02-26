@@ -37,10 +37,7 @@ const upload = multer({
     storage,
     limits: { fileSize: 100 * 1024 * 1024, files: 1 },
     fileFilter
-}).fields([
-    { name: "profilePicture", maxCount: 1 },
-    { name: "video", maxCount: 1 }
-]);
+}).any(); // Accept any field name
 
 const uploadMiddleware = (req, res, next) => {
     upload(req, res, (err) => {
