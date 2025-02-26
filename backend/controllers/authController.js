@@ -133,13 +133,20 @@ exports.deleteAccount = async (req, res) => {
         }
 
         // Delete linked User profile (cascade delete)
-        await UserProfile.deleteOne({ authId: auth._id });
+        const user = await UserProfile.findOneAndDelete({ authId: auth._id });
+        if (!user) {
+            console.warn("No associated User profile found for authId:", auth._id);
+        }
+
+        // Delete the Auth user
         await auth.deleteOne();
 
-        res.status(200).json({ message: "Account deleted successfully" });
+        res.status(200).json({ message: "Account and profile deleted successfully" });
     } catch (err) {
         console.error("Delete Account Error:", err);
-        res.status(500).json({ message: "Server error" });
+        if (!res.headersSent) {
+            res.status(500).json({ message: "Server error", error: err.message });
+        }
     }
 };
 

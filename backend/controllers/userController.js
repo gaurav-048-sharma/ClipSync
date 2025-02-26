@@ -66,7 +66,7 @@ exports.getOwnProfile = async (req, res) => {
 exports.updateUserProfile = (wss) => async (req, res) => {
     try {
         const { bio, username, name } = req.body;
-        const profilePicture = req.files && req.files.length > 0 ? req.files[0].location : undefined; // Use first file
+        const profilePicture = req.files && req.files?.length > 0 ? req.files[0].location : undefined; // Use first file
 
         const user = await UserProfile.findOne({ authId: req.user.id });
         if (!user) {
@@ -120,7 +120,7 @@ exports.updateUserProfile = (wss) => async (req, res) => {
             res.status(200).json({ message: "Profile updated successfully", user: populatedUser });
         }
     } catch (err) {
-        console.error("Update User Profile Error:", err);
+        //console.error("Update User Profile Error:", err);
         if (!res.headersSent) {
             res.status(500).json({ message: "Server error", error: err.message });
         }

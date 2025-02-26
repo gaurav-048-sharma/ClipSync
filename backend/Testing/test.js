@@ -1,11 +1,7 @@
-const bcrypt = require("bcrypt");
-
-// Replace with the actual hashed password from MongoDB
-const storedHashedPassword = "$2b$10$wk0XgTJAgehrSpfE0/AGseCzY.6/ar.a.MZxDZNU8f770Fh5fl8eu"; 
-
-// Replace with the password you're trying to log in with
-const inputPassword = "1234567"; 
-
-bcrypt.compare(inputPassword, storedHashedPassword)
-    .then(match => console.log("✅ Password Match:", match))
-    .catch(err => console.error("❌ Error:", err));
+require("dotenv").config();
+console.log("S3 Config:", {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ? "****" : undefined,
+    region: process.env.AWS_REGION,
+    bucket: process.env.S3_BUCKET_NAME
+});
