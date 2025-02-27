@@ -1,34 +1,4 @@
 
-
-
-
-
-
-
-//   const authRoute = require("./routes/authRoutes.js");
-//   const userRoutes = require("./routes/userRoutes.js");
-//   const reelRoutes = require("./routes/reelRoutes.js")
-
-// const server = app.listen(PORT, (req, res) => {
-//     connectDb();
-//     console.log(`Server listening on http://localhost:${PORT}`);
-// });
-
-// const wss = new WebSocketServer({ server });
-// wss.on("connection", (ws) => {
-//     console.log("WebSocket client connected");
-//     ws.on("message", (message) => console.log("Received:", message));
-//     ws.on("close", () => console.log("WebSocket client disconnected"));
-// });
-
-// //routes
-// app.use("/api/auth",authRoute );
-// app.use("/api/users", userRoutes)(wss);
-// app.use("/api/profile", reelRoutes)
-
-// // Export app and wss
-// module.exports = { app, wss };
-
 require("dotenv").config();
 const express = require("express");
 const app = express();
@@ -37,6 +7,7 @@ const passport = require("passport");
 const session = require("express-session");
 const connectDb = require("./db/mongoDb.js");
 const { WebSocketServer } = require("ws");
+const cors = require('cors');
 
 // Import Passport Configuration
 require("./config/passport.js");
@@ -44,6 +15,7 @@ require("./config/passport.js");
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cors({ origin: 'http://localhost:5173' }));
 
 // Initialize Passport with session
 app.use(session({
