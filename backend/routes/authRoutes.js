@@ -20,6 +20,7 @@ router.get('/google/callback',
 
 // Standard Auth Routes
 router.post("/signup", authController.signup);
+router.get('/all', authController.getAllUsers);
 router.get("/user/:username", authController.getUser);
 router.get("/profile", authMiddleware, authController.getOwnProfile);
 router.put("/profile", authMiddleware, authController.updateProfile);

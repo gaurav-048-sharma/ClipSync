@@ -6,27 +6,48 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/api/users/', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setProfile(response.data);
-      } catch (err) {
-        console.error('Profile fetch error:', err);
+  const fetchProfileData = async () => {
+    try {
+      const profileResponse = await axios.get('http://localhost:5000/api/users/', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setProfile(profileResponse.data);
+
+      const username = profileResponse.data.authId.username;
+      const followersResponse = await axios.get(`http://localhost:5000/api/users/followers/${username}`);
+      setFollowersCount(followersResponse.data.followers.length);
+
+      const followingResponse = await axios.get(`http://localhost:5000/api/users/following/${username}`);
+      setFollowingCount(followingResponse.data.following.length);
+    } catch (err) {
+      console.error('Profile fetch error:', err);
+      if (err.response && [401, 404, 500].includes(err.response.status)) {
+        localStorage.removeItem('token');
+        navigate('/login');
       }
-    };
-    fetchProfile();
-  }, [token]);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfileData();
+  }, [token, navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token'); // Clear token
-    navigate('/login'); // Redirect to login
+    localStorage.removeItem('token');
+    navigate('/login');
   };
+
+  // Refresh counts when navigating back to profile
+  useEffect(() => {
+    const handleFocus = () => fetchProfileData();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [token, navigate]);
 
   if (!profile) return <div className="text-center mt-10 text-lg">Loading...</div>;
 
@@ -47,11 +68,40 @@ const Profile = () => {
             <p className="text-md md:text-lg text-gray-700">{profile.authId.name}</p>
             <p className="text-sm md:text-md text-gray-600">{profile.bio || 'No bio yet'}</p>
           </div>
-          <div className="flex flex-col space-y-2 w-full max-w-xs">
+          <div className="flex flex-col space-y-4 w-full max-w-xs">
             <Button variant="outline" onClick={() => navigate('/edit-profile')}>
               Edit Profile
             </Button>
-            <Button variant="destructive" onClick={handleLogout}>
+            <Button variant="outline" onClick={() => navigate(`/reels/${profile.authId.username}`)}>
+              View Reels
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/upload-reel')}>
+              Upload Reel
+            </Button>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/followers/${profile.authId.username}`)}
+                className="w-full"
+              >
+                Followers
+              </Button>
+              <p className="text-sm text-gray-600 text-center">{followersCount}</p>
+            </div>
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/following/${profile.authId.username}`)}
+                className="w-full"
+              >
+                Following
+              </Button>
+              <p className="text-sm text-gray-600 text-center">{followingCount}</p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/suggested-users')} className="w-full">
+              Suggested Users
+            </Button>
+            <Button variant="destructive" onClick={handleLogout} className="w-full">
               Logout
             </Button>
           </div>

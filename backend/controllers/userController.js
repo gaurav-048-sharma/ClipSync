@@ -165,103 +165,85 @@ exports.deleteUserProfile = async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 };
-// FOLLOW: Follow a user
+// Follow a user
 exports.followUser = async (req, res) => {
     try {
-        const { username } = req.params; // User to follow
-        const follower = await UserProfile.findOne({ authId: req.user.id }); // Current user
-        const following = await UserProfile.findOne({ authId: (await User.findOne({ username }))._id });
-
-        if (!follower || !following) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        if (follower._id.equals(following._id)) {
-            return res.status(400).json({ message: "Cannot follow yourself" });
-        }
-
-        if (!follower.following.includes(following._id)) {
-            follower.following.push(following._id);
-            following.followers.push(follower._id);
-            await follower.save();
-            await following.save();
-        }
-
-        const populatedFollower = await UserProfile.findById(follower._id).populate("authId", "username name");
-        res.status(200).json({ message: "Followed successfully", user: populatedFollower });
-    } catch (err) {
-        console.error("Follow User Error:", err);
-        res.status(500).json({ message: "Server error", error: err.message });
-    }
-};
-
-// UNFOLLOW: Unfollow a user
-exports.unfollowUser = async (req, res) => {
-    try {
-        const { username } = req.params;
-        const follower = await UserProfile.findOne({ authId: req.user.id });
-        const following = await UserProfile.findOne({ authId: (await User.findOne({ username }))._id });
-
-        if (!follower || !following) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        follower.following = follower.following.filter(id => !id.equals(following._id));
-        following.followers = following.followers.filter(id => !id.equals(follower._id));
+      const follower = await UserProfile.findOne({ authId: req.user.id });
+      const targetUsername = req.params.username;
+      const targetAuth = await User.findOne({ username: targetUsername });
+      if (!targetAuth) return res.status(404).json({ message: 'User not found' });
+  
+      const target = await UserProfile.findOne({ authId: targetAuth._id });
+      if (!target) return res.status(404).json({ message: 'User profile not found' });
+  
+      if (follower._id.equals(target._id)) return res.status(400).json({ message: 'Cannot follow yourself' });
+  
+      if (!follower.following.includes(target._id)) {
+        follower.following.push(target._id);
+        target.followers.push(follower._id);
         await follower.save();
-        await following.save();
-
-        const populatedFollower = await UserProfile.findById(follower._id).populate("authId", "username name");
-        res.status(200).json({ message: "Unfollowed successfully", user: populatedFollower });
+        await target.save();
+        console.log(`User ${req.user.id} followed ${targetUsername}`);
+      }
+  
+      res.status(200).json({ message: 'Followed successfully' });
     } catch (err) {
-        console.error("Unfollow User Error:", err);
-        res.status(500).json({ message: "Server error", error: err.message });
+      console.error('Follow User Error:', err);
+      res.status(500).json({ message: 'Server error' });
     }
-};
-
-// READ: Get followers list
-exports.getFollowers = async (req, res) => {
+  };
+  
+  // Unfollow a user
+  exports.unfollowUser = async (req, res) => {
     try {
-        const { username } = req.params;
-        const auth = await User.findOne({ username });
-        if (!auth) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        const user = await UserProfile.findOne({ authId: auth._id }).populate("followers", "authId").populate("authId", "username name");
-        if (!user) {
-            return res.status(404).json({ message: "Profile not found" });
-        }
-
-        const followers = await UserProfile.find({ _id: { $in: user.followers } }).populate("authId", "username name");
-        res.status(200).json({ followers });
+      const follower = await UserProfile.findOne({ authId: req.user.id });
+      const targetUsername = req.params.username;
+      const targetAuth = await User.findOne({ username: targetUsername });
+      if (!targetAuth) return res.status(404).json({ message: 'User not found' });
+  
+      const target = await UserProfile.findOne({ authId: targetAuth._id });
+      if (!target) return res.status(404).json({ message: 'User profile not found' });
+  
+      follower.following = follower.following.filter((id) => !id.equals(target._id));
+      target.followers = target.followers.filter((id) => !id.equals(follower._id));
+      await follower.save();
+      await target.save();
+      console.log(`User ${req.user.id} unfollowed ${targetUsername}`);
+  
+      res.status(200).json({ message: 'Unfollowed successfully' });
     } catch (err) {
-        console.error("Get Followers Error:", err);
-        res.status(500).json({ message: "Server error", error: err.message });
+      console.error('Unfollow User Error:', err);
+      res.status(500).json({ message: 'Server error' });
     }
-};
-
-// READ: Get following list
-exports.getFollowing = async (req, res) => {
+  };
+  
+  // Get followers
+  exports.getFollowers = async (req, res) => {
     try {
-        const { username } = req.params;
-        const auth = await User.findOne({ username });
-        if (!auth) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        const user = await UserProfile.findOne({ authId: auth._id }).populate("following", "authId").populate("authId", "username name");
-        if (!user) {
-            return res.status(404).json({ message: "Profile not found" });
-        }
-
-        const following = await UserProfile.find({ _id: { $in: user.following } }).populate("authId", "username name");
-        res.status(200).json({ following });
+      const { username } = req.params;
+      const auth = await User.findOne({ username });
+      if (!auth) return res.status(404).json({ message: 'User not found' });
+      const user = await UserProfile.findOne({ authId: auth._id }).populate('followers', 'authId');
+      res.status(200).json({ followers: user.followers });
     } catch (err) {
-        console.error("Get Following Error:", err);
-        res.status(500).json({ message: "Server error", error: err.message });
+      console.error('Get Followers Error:', err);
+      res.status(500).json({ message: 'Server error' });
     }
-};
-
+  };
+  
+  // Get following
+  exports.getFollowing = async (req, res) => {
+    try {
+      const { username } = req.params;
+      const auth = await User.findOne({ username });
+      if (!auth) return res.status(404).json({ message: 'User not found' });
+      const user = await UserProfile.findOne({ authId: auth._id }).populate('following', 'authId');
+      res.status(200).json({ following: user.following });
+    } catch (err) {
+      console.error('Get Following Error:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  };
 // READ: Get user activity (posted, liked, commented reels)
 exports.getUserActivity = async (req, res) => {
     try {

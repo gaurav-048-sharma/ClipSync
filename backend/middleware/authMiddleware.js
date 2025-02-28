@@ -16,7 +16,7 @@ const authMiddleware = (req, res, next) => {
         // Verify token using JWT_SECRET from .env
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = decoded; // Attach decoded payload (e.g., { id: "auth_id" }) to request
-        console.log("Token verified for user:", decoded.id); // Debug log (remove in production)
+        ///console.log("Token verified for user:", decoded.id); // Debug log (remove in production)
         next();
     } catch (err) {
         console.error("Token verification error:", err.message); // Debug log

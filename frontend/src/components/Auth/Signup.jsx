@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Card, CardContent, CardHeader,CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Label } from '../ui/label';
 
 const Signup = () => {
@@ -20,15 +21,34 @@ const Signup = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  // Manual Signup
+  const handleManualSignup = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.post('http://localhost:5000/api/auth/signup', formData);
-      console.log('Signup successful:', response.data);
+      console.log('Manual Signup successful:', response.data);
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed');
     }
+  };
+
+  // Google Signup
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/google-login', {
+        token: credentialResponse.credential,
+      });
+      localStorage.setItem('token', response.data.token);
+      console.log('Google Signup successful:', response.data);
+      navigate('/profile'); // Redirect to profile since user is authenticated
+    } catch (err) {
+      setError(err.response?.data?.message || 'Google Signup failed');
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google Signup failed');
   };
 
   return (
@@ -37,8 +57,9 @@ const Signup = () => {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl md:text-3xl font-bold">Sign Up</CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <CardContent className="p-6 space-y-6">
+          {/* Manual Signup Form */}
+          <form onSubmit={handleManualSignup} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-medium">Username</Label>
               <Input
@@ -90,10 +111,23 @@ const Signup = () => {
                 required
               />
             </div>
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
             <Button type="submit" className="w-full py-2 text-lg">Sign Up</Button>
           </form>
-          <p className="mt-4 text-sm text-center text-gray-600">
+
+          {/* Google Signup */}
+          <div className="flex flex-col items-center space-y-4">
+            <p className="text-sm text-gray-600">Or sign up with Google</p>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              text="signup_with" // Changed to "signup_with" for signup context
+              shape="rectangular"
+              size="large"
+            />
+          </div>
+
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          <p className="text-sm text-center text-gray-600">
             Already have an account?{' '}
             <a href="/login" className="text-blue-500 hover:underline">Log in</a>
           </p>

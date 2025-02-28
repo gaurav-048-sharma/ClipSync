@@ -49,20 +49,46 @@ exports.signup = async (req, res) => {
 };
 
 
-// READ: Get public user info by username
-exports.getUser = async (req, res) => {
+// GET ALL USERS: Fetch all users for suggestions
+exports.getAllUsers = async (req, res) => {
     try {
-        const { username } = req.params;
-        const auth = await User.findOne({ username }).select("username name created_at");
-        if (!auth) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        res.status(200).json(auth);
+      const users = await User.find({}, 'username name').lean();
+      res.status(200).json(users);
     } catch (err) {
-        console.error("Get User Error:", err);
-        res.status(500).json({ message: "Server error" });
+      console.error('Get All Users Error:', err);
+      res.status(500).json({ message: 'Server error' });
     }
-};
+  };
+  exports.getUser = async (req, res) => {
+    try {
+      const { username } = req.params;
+      const auth = await User.findOne({ username });
+      if (!auth) {
+        console.log(`User not found: ${username}`);
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const user = await UserProfile.findOne({ authId: auth._id });
+      if (!user) {
+        console.log(`User profile not found for authId: ${auth._id}`);
+        return res.status(404).json({ message: 'User profile not found' });
+      }
+  
+      const responseData = {
+        authId: {
+          username: auth.username,
+          name: auth.name,
+        },
+        profilePicture: user.profilePicture,
+        bio: user.bio,
+      };
+      console.log(`Fetched user: ${username}`, responseData);
+      res.status(200).json(responseData);
+    } catch (err) {
+      console.error('Get User Error:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  };
 
 // READ: Get own profile (authenticated)
 exports.getOwnProfile = async (req, res) => {
@@ -171,7 +197,7 @@ exports.login = async (req, res) => {
         if (!isMatch) {
             return res.status(400).json({ message: "Incorrect password" });
         }
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+        const token = jwt.sign({ id: user._id , email: user.email}, process.env.JWT_SECRET, { expiresIn: "1h" });
         res.status(200).json({ message: "Login successful", token });
     } catch (err) {
         console.error('Login Error:', err);
@@ -222,40 +248,33 @@ exports.login = async (req, res) => {
 
 exports.googleLogin = async (req, res) => {
     try {
-        const { token: idToken } = req.body;
-        if (!idToken) {
-            return res.status(400).json({ message: "Google token is required" });
-        }
-
-        const ticket = await client.verifyIdToken({ idToken, audience: CLIENT_ID });
-        const payload = ticket.getPayload();
-        const googleId = payload["sub"];
-        const email = payload["email"];
-        const username = payload["email"].split("@")[0];
-        const name = payload["name"] || "";
-
-        let auth = await User.findOne({ googleId });
-        if (!auth) {
-            const existingAuth = await Auth.findOne({ $or: [{ username }, { email }] });
-            if (existingAuth) {
-                return res.status(400).json({ 
-                    message: existingAuth.username === username ? "Username taken" : "Email already exists" 
-                });
-            }
-            auth = new User({ username, name, email, googleId });
-            await auth.save();
-
-            const user = new UserProfile({ authId: auth._id });
-            await user.save();
-        }
-
-        const token = jwt.sign({ id: auth._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-        res.status(200).json({ message: "Google login successful", token, username: auth.username });
+      const { token } = req.body;
+  
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID, // Must match frontend Client ID
+      });
+      const payload = ticket.getPayload();
+      const { email, name, sub: googleId } = payload;
+  
+      let auth = await User.findOne({ email });
+      if (!auth) {
+        auth = new User({ email, name, googleId, username: email.split('@')[0] });
+        await auth.save();
+        const user = new UserProfile({ authId: auth._id });
+        await user.save();
+      } else if (!auth.googleId) {
+        auth.googleId = googleId;
+        await auth.save();
+      }
+  
+      const jwtToken = jwt.sign({ id: auth._id, email: auth.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      res.status(200).json({ token: jwtToken });
     } catch (err) {
-        console.error("Google Login Error:", err);
-        res.status(500).json({ message: "Server error" });
+      console.error("Google Login Error:", err);
+      res.status(500).json({ message: "Google authentication failed" });
     }
-};
+  };
 
 // Existing logout function
 exports.logout = async (req, res) => {
@@ -271,6 +290,7 @@ exports.logout = async (req, res) => {
 };
 module.exports = {
     signup: exports.signup,
+    getAllUsers: exports.getAllUsers,
     getUser: exports.getUser,
     getOwnProfile: exports.getOwnProfile,
     updateProfile: exports.updateProfile,
