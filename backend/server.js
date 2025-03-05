@@ -15,7 +15,7 @@ require("./config/passport.js");
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: process.env.VITE_REDIRECT_URI }));
 
 
 
