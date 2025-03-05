@@ -381,7 +381,7 @@ exports.microsoftCallback = async (req, res) => {
     }
 
     const token = jwt.sign({ id: auth._id, email: auth.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.redirect(`http://localhost:5173/dashboard?token=${token}`);
+    res.redirect(`${process.env.VITE_REDIRECT_URI}/dashboard?token=${token}`);
   } catch (err) {
     console.error('Microsoft Callback Error:', err.response?.data || err.message);
     res.status(500).json({ message: 'Microsoft authentication failed', error: err.response?.data || err.message });
