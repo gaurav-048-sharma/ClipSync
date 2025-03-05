@@ -1,7 +1,7 @@
 const User = require("../models/authModel.js")
 const UserProfile = require("../models/userModel.js");
 const Reel = require("../models/reelModel.js")
-const { wss } = require("../server");
+//const { wss } = require("../server");
 
 exports.createUserProfile = async (req, res) => {
     try {

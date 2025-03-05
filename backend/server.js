@@ -29,22 +29,23 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Start HTTP server and connect to MongoDB
-const server = app.listen(PORT, () => {
-    connectDb();
-    console.log(`Server listening on http://localhost:${PORT}`);
-});
+connectDb();
+// const server = app.listen(PORT, () => {
+//     connectDb();
+//     console.log(`Server listening on http://localhost:${PORT}`);
+// });
 
 // Initialize WebSocket server
-const wss = new WebSocketServer({ server });
-wss.on("connection", (ws) => {
-    console.log("WebSocket client connected");
-    ws.on("message", (message) => console.log("Received:", message));
-    ws.on("close", () => console.log("WebSocket client disconnected"));
-});
+// const wss = new WebSocketServer({ server });
+// wss.on("connection", (ws) => {
+//     console.log("WebSocket client connected");
+//     ws.on("message", (message) => console.log("Received:", message));
+//     ws.on("close", () => console.log("WebSocket client disconnected"));
+// });
 
 // Import routes and pass wss where needed
 const authRoute = require("./routes/authRoutes.js");
-const userRoutes = require("./routes/userRoutes.js")(wss); // Pass wss to userRoutes
+const userRoutes = require("./routes/userRoutes.js")(); // Pass wss to userRoutes
 const reelRoutes = require("./routes/reelRoutes.js"); // Assuming reelRoutes.js is renamed to profileRoutes.js
 const messageRoutes = require("./routes/messageRoute.js")
 
@@ -55,6 +56,6 @@ app.use("/api/profile", reelRoutes);
 app.use("/api/messages", messageRoutes)
 
 // Export app and wss
-module.exports = { app, wss };
+module.exports = { app };
 
 
