@@ -4,6 +4,8 @@ const BlacklistedToken = require("../models/blacklistedToken.js");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require('google-auth-library'); // Add Google Auth Library
+const axios = require("axios");
+
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // From .env
 const client = new OAuth2Client(CLIENT_ID);
@@ -52,43 +54,80 @@ exports.signup = async (req, res) => {
 // GET ALL USERS: Fetch all users for suggestions
 exports.getAllUsers = async (req, res) => {
     try {
-      const users = await User.find({}, 'username name').lean();
+      const users = await User.find({}, 'username name segregation').lean();
       res.status(200).json(users);
     } catch (err) {
       console.error('Get All Users Error:', err);
       res.status(500).json({ message: 'Server error' });
     }
   };
-  exports.getUser = async (req, res) => {
-    try {
-      const { username } = req.params;
-      const auth = await User.findOne({ username });
-      if (!auth) {
-        console.log(`User not found: ${username}`);
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      const user = await UserProfile.findOne({ authId: auth._id });
-      if (!user) {
-        console.log(`User profile not found for authId: ${auth._id}`);
-        return res.status(404).json({ message: 'User profile not found' });
-      }
-  
-      const responseData = {
-        authId: {
-          username: auth.username,
-          name: auth.name,
-        },
-        profilePicture: user.profilePicture,
-        bio: user.bio,
-      };
-      console.log(`Fetched user: ${username}`, responseData);
-      res.status(200).json(responseData);
-    } catch (err) {
-      console.error('Get User Error:', err);
-      res.status(500).json({ message: 'Server error' });
+// const User = require('../models/userModel'); // Adjust to your User model path
+// const UserProfile = require('../models/userProfileModel'); // Adjust to your UserProfile model path
+
+exports.getUser = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const auth = await User.findOne({ username });
+    if (!auth) {
+      console.log(`User not found: ${username}`);
+      return res.status(404).json({ message: 'User not found' });
     }
-  };
+
+    const user = await UserProfile.findOne({ authId: auth._id });
+    if (!user) {
+      console.log(`User profile not found for authId: ${auth._id}`);
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    const responseData = {
+      _id: auth._id, // Include MongoDB ID
+      authId: {
+        username: auth.username,
+        name: auth.name,
+      },
+      profilePicture: user.profilePicture,
+      bio: user.bio,
+    };
+    console.log(`Fetched user: ${username}`, responseData);
+    res.status(200).json(responseData);
+  } catch (err) {
+    console.error('Get User Error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// New: Get user by ID
+exports.getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auth = await User.findById(id);
+    if (!auth) {
+      console.log(`User not found by ID: ${id}`);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const user = await UserProfile.findOne({ authId: auth._id });
+    if (!user) {
+      console.log(`User profile not found for authId: ${auth._id}`);
+      return res.status(404).json({ message: 'User profile not found' });
+    }
+
+    const responseData = {
+      _id: auth._id,
+      authId: {
+        username: auth.username,
+        name: auth.name,
+      },
+      profilePicture: user.profilePicture,
+      bio: user.bio,
+    };
+    console.log(`Fetched user by ID: ${id}`, responseData);
+    res.status(200).json(responseData);
+  } catch (err) {
+    console.error('Get User by ID Error:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
 
 // READ: Get own profile (authenticated)
 exports.getOwnProfile = async (req, res) => {
@@ -198,83 +237,156 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: "Incorrect password" });
         }
         const token = jwt.sign({ id: user._id , email: user.email}, process.env.JWT_SECRET, { expiresIn: "1h" });
-        res.status(200).json({ message: "Login successful", token });
+        res.status(200).json({ message: "Login successful", token, segregation: user.segregation });
     } catch (err) {
         console.error('Login Error:', err);
         res.status(500).json({ error: "An error occurred during login" });
     }
 };
 
-// Google Login (new function)
-// exports.googleLogin = async (req, res) => {
-//     try {
-//         const { token: idToken } = req.body; // Google ID token from frontend
-//         if (!idToken) {
-//             return res.status(400).json({ message: "Google token is required" });
-//         }
-
-//         // Verify Google ID token
-//         const ticket = await client.verifyIdToken({
-//             idToken,
-//             audience: CLIENT_ID,
-//         });
-//         const payload = ticket.getPayload();
-//         const googleId = payload['sub'];
-//         const email = payload['email'];
-//         const username = payload['name'] || email.split('@')[0];
-
-//         // Check if user exists
-//         let user = await User.findOne({ googleId });
-//         if (!user) {
-//             const existingEmailUser = await User.findOne({ email });
-//             if (existingEmailUser) {
-//                 return res.status(400).json({ 
-//                     message: "Email is already registered with a password account. Please log in with email/password or merge accounts." 
-//                 });
-//             }
-//             user = new User({ username, email, googleId });
-//             await user.save();
-//             console.log('New Google User Created:', user);
-//         }
-
-//         // Generate JWT token
-//         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-//         res.status(200).json({ message: "Google login successful", token });
-//     } catch (err) {
-//         console.error('Google Login Error:', err);
-//         res.status(500).json({ error: "Google login failed", details: err.message });
-//     }
-// };
 
 exports.googleLogin = async (req, res) => {
-    try {
+  try {
       const { token } = req.body;
-  
+      if (!token) {
+          return res.status(400).json({ message: 'Token is required' });
+      }
+
       const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: process.env.GOOGLE_CLIENT_ID, // Must match frontend Client ID
+          idToken: token,
+          audience: process.env.GOOGLE_CLIENT_ID,
       });
       const payload = ticket.getPayload();
       const { email, name, sub: googleId } = payload;
-  
+
+      // Move the username assignment here
+      const username = name || email.split('@')[0];
+
       let auth = await User.findOne({ email });
       if (!auth) {
-        auth = new User({ email, name, googleId, username: email.split('@')[0] });
-        await auth.save();
-        const user = new UserProfile({ authId: auth._id });
-        await user.save();
+          auth = new User({ email, name, googleId, username });
+          await auth.save();
+
+          const userProfile = new UserProfile({ authId: auth._id });
+          await userProfile.save();
       } else if (!auth.googleId) {
-        auth.googleId = googleId;
-        await auth.save();
+          auth.googleId = googleId;
+          await auth.save();
       }
-  
-      const jwtToken = jwt.sign({ id: auth._id, email: auth.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-      res.status(200).json({ token: jwtToken });
-    } catch (err) {
-      console.error("Google Login Error:", err);
-      res.status(500).json({ message: "Google authentication failed" });
+
+      const tokenJwt = jwt.sign({ id: auth._id, email: auth.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      res.status(200).json({ token: tokenJwt });
+  } catch (err) {
+      console.error('Google Login Error:', err.message, err.stack);
+      res.status(500).json({ message: 'Google authentication failed', error: err.message });
+  }
+};
+
+
+
+    //  exports.googleLogin = async (req, res) => {
+    //   try {
+    //     const { token } = req.body;
+    //     if (!token) {
+    //       return res.status(400).json({ message: 'Token is required' });
+    //     }
+    
+    //     const ticket = await client.verifyIdToken({
+    //       idToken: token,
+    //       audience: process.env.GOOGLE_CLIENT_ID,
+    //     });
+        
+    //  const username = payload['name'] || email.split('@')[0];
+    //     const payload = ticket.getPayload();
+    //     const { email, name, sub: googleId } = payload;
+    
+    //     let auth = await User.findOne({ email });
+    //     if (!auth) {
+    //       const username = email.split('@')[0]; // Derive username from email
+    //       auth = new User({ email, name, googleId, username });
+    //       await auth.save();
+    
+    //       const userProfile = new UserProfile({ authId: auth._id });
+    //       await userProfile.save();
+    //     } else if (!auth.googleId) {
+    //       auth.googleId = googleId;
+    //       await auth.save();
+    //     }
+    
+    //     const tokenJwt = jwt.sign({ id: auth._id, email: auth.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    //     res.status(200).json({ token: tokenJwt});
+    //   } catch (err) {
+    //     console.error('Google Login Error:', err.message, err.stack);
+    //     res.status(500).json({ message: 'Google authentication failed', error: err.message });
+    //   }
+    // };
+// ... (other imports and methods remain the same)
+
+exports.microsoftLogin = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
     }
-  };
+
+    // Verify Microsoft token (optional, if using Azure AD's token verification)
+    // For simplicity, we'll trust MSAL's token and fetch Graph data
+    const graphResponse = await axios.get('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const { mail: email, displayName: name, userPrincipalName } = graphResponse.data;
+
+    let auth = await User.findOne({ email });
+    if (!auth) {
+      const username = userPrincipalName.split('@')[0]; // e.g., 23BTIT101
+      auth = new User({ email, name, microsoftId: userPrincipalName, username });
+      await auth.save();
+      const userProfile = new UserProfile({ authId: auth._id });
+      await userProfile.save();
+    } else if (!auth.microsoftId) {
+      auth.microsoftId = userPrincipalName;
+      await auth.save();
+    }
+
+    const tokenJwt = jwt.sign({ id: auth._id, email: auth.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    res.status(200).json({ token: tokenJwt, segregation: auth.segregation });
+  } catch (err) {
+    console.error('Microsoft Login Error:', err);
+    res.status(500).json({ message: 'Microsoft authentication failed' });
+  }
+};
+// Microsoft Callback (Redirect Flow)
+exports.microsoftCallback = async (req, res) => {
+  try {
+    const { id, accessToken } = req.user; // From Passport Microsoft strategy
+    console.log('Received Microsoft accessToken:', accessToken);
+
+    // Fetch user data from Microsoft Graph API
+    const graphResponse = await axios.get('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const { mail: email, displayName: name, userPrincipalName } = graphResponse.data;
+    console.log('Graph API Response:', { email, name, userPrincipalName });
+
+    let auth = await User.findOne({ email });
+    if (!auth) {
+      const username = userPrincipalName.split('@')[0]; // e.g., 23BTIT101
+      auth = new User({ email, name, microsoftId: id, username });
+      await auth.save();
+      const userProfile = new UserProfile({ authId: auth._id });
+      await userProfile.save();
+    } else if (!auth.microsoftId) {
+      auth.microsoftId = id;
+      await auth.save();
+    }
+
+    const token = jwt.sign({ id: auth._id, email: auth.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    res.redirect(`http://localhost:5173/dashboard?token=${token}`);
+  } catch (err) {
+    console.error('Microsoft Callback Error:', err.response?.data || err.message);
+    res.status(500).json({ message: 'Microsoft authentication failed', error: err.response?.data || err.message });
+  }
+};
 
 // Existing logout function
 exports.logout = async (req, res) => {
@@ -292,11 +404,14 @@ module.exports = {
     signup: exports.signup,
     getAllUsers: exports.getAllUsers,
     getUser: exports.getUser,
+    getUserById: exports.getUserById,
     getOwnProfile: exports.getOwnProfile,
     updateProfile: exports.updateProfile,
     deleteAccount: exports.deleteAccount,
     login: exports.login,
     googleLogin: exports.googleLogin,
+    microsoftLogin: exports.microsoftLogin,
+    microsoftCallback: exports.microsoftCallback,
     logout: exports.logout
 };
 

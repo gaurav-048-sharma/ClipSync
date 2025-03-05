@@ -19,21 +19,21 @@ const SuggestedUsers = () => {
       }
 
       try {
-        const profileResponse = await axios.get('http://localhost:5000/api/users/', {
+        const profileResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/users/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const username = profileResponse.data.authId.username;
         console.log('Logged-in username:', username);
 
         const followingResponse = await axios.get(
-          `http://localhost:5000/api/users/following/${username}`,
+          `${import.meta.env.VITE_BACKEND_URL}/api/users/following/${username}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const followingList = followingResponse.data.following.map((user) => user.authId.username);
         setFollowing(followingList);
         console.log('Initial following list:', followingList);
 
-        const usersResponse = await axios.get('http://localhost:5000/api/auth/all');
+        const usersResponse = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/all`);
         console.log('All users from backend:', usersResponse.data);
 
         const filteredUsers = usersResponse.data.filter((user) => user.username !== username);
@@ -61,7 +61,7 @@ const SuggestedUsers = () => {
     });
 
     try {
-      const url = `http://localhost:5000/api/users/${action}/${targetUsername}`;
+      const url = `${import.meta.env.VITE_BACKEND_URL}/api/users/${action}/${targetUsername}`;
       console.log('Sending request to:', url, 'with token:', token);
       const response = await axios.post(url, {}, {
         headers: { Authorization: `Bearer ${token}` },

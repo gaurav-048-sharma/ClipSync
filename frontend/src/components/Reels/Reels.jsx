@@ -12,7 +12,7 @@ const Reels = () => {
   useEffect(() => {
     const fetchReels = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/profile/reels/user/${username}`);
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/profile/reels/user/${username}`);
         setReels(response.data);
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to fetch reels');

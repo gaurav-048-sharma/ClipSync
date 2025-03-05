@@ -1,7 +1,64 @@
 const passport = require('passport');
+const MicrosoftStrategy = require('passport-microsoft').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/authModel.js');
 const jwt = require('jsonwebtoken');
+// passport.use(
+//   new MicrosoftStrategy(
+//     {
+//       clientID: process.env.MICROSOFT_CLIENT_ID,
+//       clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+//       callbackURL: 'http://localhost:5000/api/auth/microsoft/callback',
+//       scope: ['user.read'], // Ensure scope includes Graph permissions
+//       tenantId: process.env.MICROSOFT_TENANT_ID,
+//     },
+//     async (accessToken, refreshToken, profile, done) => {
+//       try {
+//         console.log('Microsoft Access Token:', accessToken); // Debug token
+//         return done(null, { id: profile.id, accessToken });
+//       } catch (err) {
+//         return done(err, null);
+//       }
+//     }
+//   )
+// );
+
+passport.use(
+    new MicrosoftStrategy(
+      {
+        clientID: process.env.MICROSOFT_CLIENT_ID,
+        clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+        callbackURL: '/api/auth/microsoft/callback',
+        scope: ['user.read'],
+        tenantId: process.env.MICROSOFT_TENANT_ID,
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const email = profile.emails[0].value;
+          let user = await User.findOne({ email });
+          if (!user) {
+            user = new User({
+              email,
+              name: profile.displayName,
+              microsoftId: profile.id,
+              username: email.split('@')[0], // e.g., 23BTIT101 from 23BTIT101@gcu.edu.in
+            });
+            await user.save();
+          } else if (!user.microsoftId) {
+            user.microsoftId = profile.id;
+            await user.save();
+          }
+            // Generate JWT token for session management
+            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+            user.token = token; // Attach token to user object for later use
+          return done(null, { id: user._id, accessToken });
+        } catch (err) {
+          return done(err, null);
+        }
+      }
+    )
+  );
+
 
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID, // From Google Cloud Console

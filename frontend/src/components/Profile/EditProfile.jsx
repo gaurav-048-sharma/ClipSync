@@ -1,13 +1,11 @@
-// src/components/Profile/EditProfile.jsx
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Label } from '../ui/label';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 
-const EditProfile = () => {
+const EditProfile = ({ onClose, onSave, initialData, token }) => {
   const [formData, setFormData] = useState({
     username: '',
     name: '',
@@ -15,27 +13,18 @@ const EditProfile = () => {
     profilePicture: null,
   });
   const [error, setError] = useState('');
-  const navigate = useNavigate();
-  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/api/users/', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setFormData({
-          username: response.data.authId.username,
-          name: response.data.authId.name,
-          bio: response.data.bio || '',
-          profilePicture: null,
-        });
-      } catch (err) {
-        console.error('Fetch profile error:', err);
-      }
-    };
-    fetchProfile();
-  }, [token]);
+    console.log('EditProfile mounted, initialData:', initialData); // Debug initial data
+    if (initialData) {
+      setFormData({
+        username: initialData.authId.username || '',
+        name: initialData.authId.name || '',
+        bio: initialData.bio || '',
+        profilePicture: null,
+      });
+    }
+  }, [initialData]);
 
   const handleChange = (e) => {
     if (e.target.name === 'profilePicture') {
@@ -47,6 +36,8 @@ const EditProfile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Clear previous errors
+
     const data = new FormData();
     data.append('username', formData.username);
     data.append('name', formData.name);
@@ -56,24 +47,26 @@ const EditProfile = () => {
     }
 
     try {
-      const response = await axios.put('http://localhost:5000/api/users/', data, {
+      const response = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/users/`, data, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      console.log('Profile updated:', response.data);
-      navigate('/profile');
+      console.log('Profile updated successfully, response.data:', response.data); // Debug response
+      onSave(response.data); // Pass updated data back to Profile
+      onClose(); // Close modal on success
     } catch (err) {
-      setError(err.response?.data?.message || 'Update failed');
+      console.error('Update error:', err.response?.data || err.message);
+      setError(err.response?.data?.message || 'Failed to update profile. Please try again.');
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <Card className="w-full max-w-md shadow-lg bg-white">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl md:text-3xl font-bold">Edit Profile</CardTitle>
+          <CardTitle className="text-2xl font-bold">Edit Profile</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -126,7 +119,12 @@ const EditProfile = () => {
               />
             </div>
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-            <Button type="submit" className="w-full py-2 text-lg">Save Changes</Button>
+            <div className="flex space-x-4">
+              <Button type="submit" className="w-full py-2 text-lg">Save Changes</Button>
+              <Button variant="outline" className="w-full py-2 text-lg" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

@@ -46,11 +46,13 @@ wss.on("connection", (ws) => {
 const authRoute = require("./routes/authRoutes.js");
 const userRoutes = require("./routes/userRoutes.js")(wss); // Pass wss to userRoutes
 const reelRoutes = require("./routes/reelRoutes.js"); // Assuming reelRoutes.js is renamed to profileRoutes.js
+const messageRoutes = require("./routes/messageRoute.js")
 
 // Routes
 app.use("/api/auth", authRoute);
 app.use("/api/users", userRoutes);
 app.use("/api/profile", reelRoutes);
+app.use("/api/messages", messageRoutes)
 
 // Export app and wss
 module.exports = { app, wss };
